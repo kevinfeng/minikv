@@ -1,5 +1,7 @@
 mod memory;
+mod sleddb;
 
+pub use sleddb::SledDb;
 pub use memory::MemTable;
 use crate::{KvError, Kvpair, Value};
 
@@ -47,6 +49,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
 
     #[test]
     fn memtable_basic_interface_should_work() {
@@ -105,5 +108,25 @@ mod tests {
         let mut data:Vec<_> = store.get_iter("t2").unwrap().collect();
         data.sort_by(|a,b| a.partial_cmp(b).unwrap());
         assert_eq!(data, vec![Kvpair::new("k1", "v1".into()), Kvpair::new("k2", "v2".into())]);
+    }
+    #[test]
+    fn sleddb_basic_interface_should_work() {
+        let dir = tempdir().unwrap();
+        let store = SledDb::new(dir);
+        test_basic_interface(store);
+    }
+
+    #[test]
+    fn sleddb_get_all_should_work() {
+        let dir = tempdir().unwrap();
+        let store = SledDb::new(dir);
+        test_get_all(store);
+    }
+
+    #[test]
+    fn sleddb_iter_should_work() {
+        let dir = tempdir().unwrap();
+        let store = SledDb::new(dir);
+        test_get_iter(store);
     }
 }
