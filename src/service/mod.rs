@@ -1,8 +1,8 @@
-use std::sync::Arc;
-use tracing::debug;
 use crate::{
     command_request::RequestData, CommandRequest, CommandResponse, KvError, MemTable, Storage,
 };
+use std::sync::Arc;
+use tracing::debug;
 
 mod command_service;
 
@@ -17,18 +17,18 @@ pub struct ServiceInner<Store> {
     on_received: Vec<fn(&CommandRequest)>,
     on_executed: Vec<fn(&CommandResponse)>,
     on_before_send: Vec<fn(&mut CommandResponse)>,
-    on_after_send: Vec<fn()>
+    on_after_send: Vec<fn()>,
 }
 
 impl<Store: Storage> ServiceInner<Store> {
     pub fn new(store: Store) -> Self {
-        Self { 
-            store: store, 
-            on_received: Vec::new(), 
-            on_executed: Vec::new(), 
-            on_before_send: Vec::new(), 
+        Self {
+            store: store,
+            on_received: Vec::new(),
+            on_executed: Vec::new(),
+            on_before_send: Vec::new(),
             on_after_send: Vec::new(),
-         }
+        }
     }
 
     pub fn fn_received(mut self, f: fn(&CommandRequest)) -> Self {
@@ -81,7 +81,9 @@ impl<Store: Storage> Service<Store> {
 
 impl<Store: Storage> From<ServiceInner<Store>> for Service<Store> {
     fn from(inner: ServiceInner<Store>) -> Self {
-        Self { inner: Arc::new(inner) }
+        Self {
+            inner: Arc::new(inner),
+        }
     }
 }
 
@@ -144,7 +146,7 @@ mod tests {
     fn service_should_work() {
         let service: Service = ServiceInner::new(MemTable::default()).into();
         let cloned = service.clone();
-        let handle = thread::spawn(move ||{
+        let handle = thread::spawn(move || {
             let res = cloned.execute(CommandRequest::new_hset("t1", "k1", "v1".into()));
             assert_res_ok(res, &[Value::default()], &[]);
         });
@@ -172,16 +174,16 @@ mod tests {
         }
 
         let service: Service = ServiceInner::new(MemTable::default())
-        .fn_received(|_: &CommandRequest| {})
-        .fn_received(b)
-        .fn_executed(c)
-        .fn_before_send(d)
-        .fn_after_send(e)
-        .into();
+            .fn_received(|_: &CommandRequest| {})
+            .fn_received(b)
+            .fn_executed(c)
+            .fn_before_send(d)
+            .fn_after_send(e)
+            .into();
 
         let res = service.execute(CommandRequest::new_hset("t1", "k1", "v1".into()));
-        assert_eq!(res.status, StatusCode::CREATED.as_u16() as _); 
-        assert_eq!(res.message, ""); 
+        assert_eq!(res.status, StatusCode::CREATED.as_u16() as _);
+        assert_eq!(res.message, "");
         assert_eq!(res.values, vec![Value::default()]);
     }
 }
@@ -191,8 +193,8 @@ use crate::{Kvpair, Value};
 
 // 测试成功返回的结果
 #[cfg(test)]
-pub fn assert_res_ok(mut res:CommandResponse, values: &[Value], pairs: &[Kvpair]) {
-    res.pairs.sort_by(|a,b| a.partial_cmp(b).unwrap());
+pub fn assert_res_ok(mut res: CommandResponse, values: &[Value], pairs: &[Kvpair]) {
+    res.pairs.sort_by(|a, b| a.partial_cmp(b).unwrap());
     assert_eq!(res.status, 200);
     assert_eq!(res.message, "");
     assert_eq!(res.values, values);
@@ -201,7 +203,7 @@ pub fn assert_res_ok(mut res:CommandResponse, values: &[Value], pairs: &[Kvpair]
 
 // 测试失败返回的结果
 #[cfg(test)]
-pub fn assert_res_error(res: CommandResponse, code: u32, msg:&str) {
+pub fn assert_res_error(res: CommandResponse, code: u32, msg: &str) {
     assert_eq!(res.status, code);
     assert!(res.message.contains(msg));
     assert_eq!(res.values, &[]);
